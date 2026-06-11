@@ -49,7 +49,6 @@ const IMAGE_NAMES = [
   "zneck_cap_right_plain",
   "zneck_cap_down_plain",
   "zneck_cap_left_plain",
-  "zneck_cross_plain",
 ] as const;
 
 type ImageName = (typeof IMAGE_NAMES)[number];
