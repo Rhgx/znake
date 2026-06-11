@@ -1,5 +1,6 @@
 import { Button } from "@base-ui/react/button";
 import { Select } from "@base-ui/react/select";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Point = { x: number; y: number };
@@ -572,7 +573,7 @@ function App() {
             aria-label="Move up"
             onClick={() => setDirection("up")}
           >
-            ↑
+            <ArrowUp aria-hidden="true" />
           </Button>
           <span />
           <Button
@@ -580,7 +581,7 @@ function App() {
             aria-label="Move left"
             onClick={() => setDirection("left")}
           >
-            ←
+            <ArrowLeft aria-hidden="true" />
           </Button>
           <span className="pad-center" aria-hidden="true" />
           <Button
@@ -588,7 +589,7 @@ function App() {
             aria-label="Move right"
             onClick={() => setDirection("right")}
           >
-            →
+            <ArrowRight aria-hidden="true" />
           </Button>
           <span />
           <Button
@@ -596,7 +597,7 @@ function App() {
             aria-label="Move down"
             onClick={() => setDirection("down")}
           >
-            ↓
+            <ArrowDown aria-hidden="true" />
           </Button>
           <span />
         </div>
