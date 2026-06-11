@@ -34,7 +34,10 @@ const SPEEDS = [
 ];
 
 const IMAGE_NAMES = [
-  "zhead",
+  "zhead_up",
+  "zhead_right",
+  "zhead_down",
+  "zhead_left",
   "zess-plush",
   "zneck_straight_vertical_plain",
   "zneck_straight_horizontal_plain",
@@ -76,8 +79,38 @@ function directionFromTo(a: Point, b: Point): DirectionName | "" {
   return "";
 }
 
-function pieceForSegment(snake: Point[], index: number): ImageName {
-  if (index === 0) return "zhead";
+function pieceForSegment(
+  snake: Point[],
+  index: number,
+  head_direction: Point,
+): ImageName {
+  if (index === 0) {
+    // Compare by vector values
+    if (
+      head_direction.x === DIRECTIONS.up.x &&
+      head_direction.y === DIRECTIONS.up.y
+    ) {
+      return "zhead_up";
+    }
+    if (
+      head_direction.x === DIRECTIONS.right.x &&
+      head_direction.y === DIRECTIONS.right.y
+    ) {
+      return "zhead_left";
+    }
+    if (
+      head_direction.x === DIRECTIONS.down.x &&
+      head_direction.y === DIRECTIONS.down.y
+    ) {
+      return "zhead_down";
+    }
+    if (
+      head_direction.x === DIRECTIONS.left.x &&
+      head_direction.y === DIRECTIONS.left.y
+    ) {
+      return "zhead_right";
+    }
+  }
 
   const current = snake[index];
   const previous = snake[index - 1];
@@ -112,6 +145,7 @@ function drawGame(
   snake: Point[],
   food: Point,
   images: Partial<Record<ImageName, HTMLImageElement>>,
+  direction: Point = DIRECTIONS.right,
 ) {
   const context = canvas.getContext("2d");
   if (!context) return;
@@ -167,7 +201,7 @@ function drawGame(
 
   for (let index = snake.length - 1; index >= 0; index -= 1) {
     const point = snake[index];
-    const image = images[pieceForSegment(snake, index)];
+    const image = images[pieceForSegment(snake, index, direction)];
 
     if (image?.complete && image.naturalWidth > 0) {
       context.drawImage(
@@ -233,6 +267,7 @@ function App() {
       snakeRef.current,
       foodRef.current,
       imagesRef.current,
+      directionRef.current,
     );
   }, []);
 
