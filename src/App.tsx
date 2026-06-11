@@ -5,11 +5,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 type Point = { x: number; y: number }
 type DirectionName = 'up' | 'right' | 'down' | 'left'
 type GameStatus = 'ready' | 'running' | 'paused' | 'dead'
+type SwipeStart = Point & { pointerId: number }
 
 const GRID_SIZE = 16
 const CANVAS_SIZE = 768
 const TILE_SIZE = CANVAS_SIZE / GRID_SIZE
 const PUBLIC_PATH = import.meta.env.BASE_URL
+const MIN_SWIPE_DISTANCE = 24
 const STARTING_SNAKE: Point[] = [
   { x: 7, y: 8 },
   { x: 6, y: 8 },
@@ -195,6 +197,7 @@ function App() {
   const foodRef = useRef<Point>(randomFood(STARTING_SNAKE))
   const imagesRef = useRef<Partial<Record<ImageName, HTMLImageElement>>>({})
   const pickupAudioRef = useRef<HTMLAudioElement | null>(null)
+  const swipeStartRef = useRef<SwipeStart | null>(null)
   const statusRef = useRef<GameStatus>('ready')
   const scoreRef = useRef(0)
 
@@ -282,6 +285,49 @@ function App() {
     },
     [start],
   )
+
+  const handlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if ((event.target as HTMLElement).closest('button')) return
+
+      swipeStartRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        pointerId: event.pointerId,
+      }
+      event.currentTarget.setPointerCapture(event.pointerId)
+    },
+    [],
+  )
+
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const startPoint = swipeStartRef.current
+      swipeStartRef.current = null
+
+      if (!startPoint || startPoint.pointerId !== event.pointerId) return
+
+      const deltaX = event.clientX - startPoint.x
+      const deltaY = event.clientY - startPoint.y
+
+      if (
+        Math.max(Math.abs(deltaX), Math.abs(deltaY)) < MIN_SWIPE_DISTANCE
+      ) {
+        return
+      }
+
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        setDirection(deltaX > 0 ? 'right' : 'left')
+      } else {
+        setDirection(deltaY > 0 ? 'down' : 'up')
+      }
+    },
+    [setDirection],
+  )
+
+  const cancelSwipe = useCallback(() => {
+    swipeStartRef.current = null
+  }, [])
 
   useEffect(() => {
     const audio = new Audio(`${PUBLIC_PATH}audio/bagels.mp3`)
@@ -393,8 +439,8 @@ function App() {
   }, [restart, setDirection, togglePause])
 
   const overlayCopy = {
-    ready: { title: null, text: 'Press start or use an arrow key.' },
-    paused: { title: 'Paused', text: 'Press space to continue.' },
+    ready: { title: null, text: 'Press start, swipe, or use an arrow key.' },
+    paused: { title: 'Paused', text: 'Press space or tap resume.' },
     dead: { title: 'Game over', text: `Score ${score}` },
     running: null,
   }[status]
@@ -416,7 +462,13 @@ function App() {
       </header>
 
       <section className="game-card">
-        <div className="board">
+        <div
+          className="board"
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={cancelSwipe}
+          onLostPointerCapture={cancelSwipe}
+        >
           <canvas
             ref={canvasRef}
             width={CANVAS_SIZE}
@@ -489,7 +541,7 @@ function App() {
             aria-label="Move up"
             onClick={() => setDirection('up')}
           >
-            W
+            ↑
           </Button>
           <span />
           <Button
@@ -497,21 +549,15 @@ function App() {
             aria-label="Move left"
             onClick={() => setDirection('left')}
           >
-            A
+            ←
           </Button>
-          <Button
-            className="pad-button"
-            aria-label={status === 'paused' ? 'Resume game' : 'Pause game'}
-            onClick={togglePause}
-          >
-            {status === 'paused' ? 'Go' : 'II'}
-          </Button>
+          <span className="pad-center" aria-hidden="true" />
           <Button
             className="pad-button"
             aria-label="Move right"
             onClick={() => setDirection('right')}
           >
-            D
+            →
           </Button>
           <span />
           <Button
@@ -519,7 +565,7 @@ function App() {
             aria-label="Move down"
             onClick={() => setDirection('down')}
           >
-            S
+            ↓
           </Button>
           <span />
         </div>
@@ -530,6 +576,7 @@ function App() {
         <span />
         <kbd>Space</kbd> to pause
       </p>
+      <p className="touch-hint">Swipe the board or use the controls</p>
     </main>
   )
 }

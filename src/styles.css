@@ -30,7 +30,10 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button {
@@ -44,7 +47,11 @@ button {
 .app-shell {
   width: min(720px, calc(100% - 32px));
   margin: 0 auto;
-  padding: 48px 0 32px;
+  padding:
+    max(48px, env(safe-area-inset-top))
+    env(safe-area-inset-right)
+    max(32px, env(safe-area-inset-bottom))
+    env(safe-area-inset-left);
 }
 
 .topbar {
@@ -97,6 +104,9 @@ button {
   position: relative;
   aspect-ratio: 1;
   background-color: #1c1714;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 canvas {
@@ -154,6 +164,7 @@ canvas {
   color: #f4f1e8;
   background: var(--surface-raised);
   cursor: pointer;
+  touch-action: manipulation;
   transition:
     border-color 140ms ease,
     background-color 140ms ease,
@@ -255,16 +266,27 @@ canvas {
 
 .mobile-pad {
   display: none;
-  grid-template-columns: repeat(3, 54px);
+  grid-template-columns: repeat(3, 56px);
   justify-content: center;
   gap: 7px;
   padding: 0 12px 14px;
 }
 
 .pad-button {
-  width: 54px;
-  height: 44px;
+  width: 56px;
+  height: 52px;
   padding: 0;
+  font-family: sans-serif;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.pad-center {
+  width: 56px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--line) 38%, transparent);
+  transform: scale(0.28);
 }
 
 .hint {
@@ -275,6 +297,14 @@ canvas {
   margin: 14px 0 0;
   color: var(--muted);
   font-size: 0.68rem;
+}
+
+.touch-hint {
+  display: none;
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-align: center;
 }
 
 .hint span {
@@ -297,7 +327,8 @@ kbd {
 @media (max-width: 600px) {
   .app-shell {
     width: min(100% - 20px, 720px);
-    padding-top: 28px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 
   .topbar {
@@ -327,6 +358,140 @@ kbd {
   }
 
   .hint {
+    display: none;
+  }
+
+  .touch-hint {
+    display: block;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar h1 {
+    font-size: 2.7rem;
+  }
+
+  .scoreboard {
+    gap: 8px;
+  }
+
+  .scoreboard div {
+    min-width: 50px;
+  }
+
+  .game-card {
+    border-radius: 14px;
+  }
+
+  .overlay {
+    padding: 16px;
+  }
+
+  .overlay p {
+    max-width: 240px;
+    margin-inline: auto;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .app-shell {
+    display: grid;
+    grid-template-columns: minmax(0, calc(100dvh - 20px)) 230px;
+    grid-template-rows: 72px 1fr;
+    gap: 10px;
+    width: fit-content;
+    max-width: calc(100% - 20px);
+    min-height: 100dvh;
+    padding: 10px;
+  }
+
+  .topbar {
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+  }
+
+  .topbar h1 {
+    font-size: 2.1rem;
+  }
+
+  .scoreboard {
+    gap: 8px;
+  }
+
+  .scoreboard div {
+    min-width: 42px;
+  }
+
+  .scoreboard span {
+    font-size: 0.56rem;
+  }
+
+  .scoreboard strong {
+    font-size: 1.2rem;
+  }
+
+  .game-card {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-row: 1 / -1;
+    grid-template-columns: minmax(0, calc(100dvh - 20px)) 230px;
+    grid-template-rows: 72px auto 1fr;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
+  .board {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    width: calc(100dvh - 20px);
+    max-width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .toolbar {
+    grid-column: 2;
+    grid-row: 2;
+    align-items: stretch;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .select-trigger {
+    width: 100%;
+  }
+
+  .mobile-pad {
+    display: grid;
+    grid-column: 2;
+    grid-row: 3;
+    align-content: center;
+    align-self: stretch;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
+  }
+
+  .hint,
+  .touch-hint {
     display: none;
   }
 }
