@@ -7,6 +7,19 @@ import { useSnakeGame } from "./hooks/useSnakeGame";
 
 function App() {
   const game = useSnakeGame();
+  const gameEnded = game.status === "dead" || game.status === "won";
+  const primaryAction = gameEnded
+    ? game.restart
+    : game.status === "ready"
+      ? game.start
+      : game.togglePause;
+  const primaryLabel = gameEnded
+    ? "Play again"
+    : game.status === "ready"
+      ? "Start"
+      : game.status === "paused"
+        ? "Resume"
+        : "Pause";
 
   return (
     <main className="app-shell">
@@ -43,8 +56,8 @@ function App() {
 
         <div className="toolbar">
           <div className="actions">
-            <Button className="button" onClick={game.togglePause}>
-              {game.status === "paused" ? "Resume" : "Pause"}
+            <Button className="button" onClick={primaryAction}>
+              {primaryLabel}
             </Button>
             <Button className="button" onClick={game.restart}>
               Restart

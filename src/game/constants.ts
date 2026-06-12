@@ -1,6 +1,6 @@
 export type Point = { x: number; y: number };
 export type DirectionName = "up" | "right" | "down" | "left";
-export type GameStatus = "ready" | "running" | "paused" | "dead";
+export type GameStatus = "ready" | "running" | "paused" | "dead" | "won";
 export type SwipeStart = Point & { pointerId: number };
 
 export const GRID_SIZE = 16;

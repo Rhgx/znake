@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import {
   DIRECTIONS,
-  GRID_SIZE,
   IMAGE_NAMES,
   MIN_SWIPE_DISTANCE,
   PUBLIC_PATH,
@@ -13,12 +12,12 @@ import {
   type Point,
   type SwipeStart,
 } from "../game/constants";
+import { drawGame } from "../game/drawing";
 import {
-  drawGame,
-  isOppositeDirection,
+  advanceSnake,
+  queueDirection,
   randomFood,
-  samePoint,
-} from "../game/drawing";
+} from "../game/logic";
 
 function vibrate(pattern: number | number[]) {
   if ("vibrate" in navigator) navigator.vibrate(pattern);
@@ -31,7 +30,7 @@ export function useSnakeGame() {
   );
   const directionRef = useRef<Point>({ ...DIRECTIONS.right });
   const directionQueueRef = useRef<Point[]>([]);
-  const foodRef = useRef<Point>(randomFood(STARTING_SNAKE));
+  const foodRef = useRef<Point | null>(randomFood(STARTING_SNAKE));
   const imagesRef = useRef<Partial<Record<ImageName, HTMLImageElement>>>({});
   const pickupAudioRef = useRef<HTMLAudioElement | null>(null);
   const swipeStartRef = useRef<SwipeStart | null>(null);
@@ -88,7 +87,9 @@ export function useSnakeGame() {
   }, [draw, resetGameState, updateStatus]);
 
   const start = useCallback(() => {
-    if (statusRef.current === "dead") resetGameState();
+    if (statusRef.current === "dead" || statusRef.current === "won") {
+      resetGameState();
+    }
     updateStatus("running");
   }, [resetGameState, updateStatus]);
 
@@ -98,7 +99,7 @@ export function useSnakeGame() {
   }, [reset, updateStatus]);
 
   const togglePause = useCallback(() => {
-    if (statusRef.current === "dead") return;
+    if (statusRef.current === "dead" || statusRef.current === "won") return;
     if (statusRef.current === "ready") {
       start();
       return;
@@ -111,17 +112,10 @@ export function useSnakeGame() {
     (directionName: DirectionName) => {
       const next = DIRECTIONS[directionName];
       const queue = directionQueueRef.current;
-      const current = queue.at(-1) ?? directionRef.current;
+      const nextQueue = queueDirection(directionRef.current, queue, next);
+      if (nextQueue === queue) return;
 
-      if (
-        queue.length >= 2 ||
-        samePoint(next, current) ||
-        isOppositeDirection(next, current)
-      ) {
-        return;
-      }
-
-      queue.push({ ...next });
+      directionQueueRef.current = nextQueue;
       vibrate(7);
 
       if (statusRef.current === "ready") start();
@@ -216,28 +210,28 @@ export function useSnakeGame() {
       const queuedDirection = directionQueueRef.current.shift();
       if (queuedDirection) directionRef.current = queuedDirection;
 
-      const head = snakeRef.current[0];
-      const next = {
-        x: head.x + directionRef.current.x,
-        y: head.y + directionRef.current.y,
-      };
+      const food = foodRef.current;
+      if (!food) {
+        updateStatus("won");
+        return;
+      }
 
-      const hitWall =
-        next.x < 0 || next.x >= GRID_SIZE || next.y < 0 || next.y >= GRID_SIZE;
-      const hitSelf = snakeRef.current.some(
-        (point, index) =>
-          index !== snakeRef.current.length - 1 && samePoint(point, next),
+      const result = advanceSnake(
+        snakeRef.current,
+        directionRef.current,
+        food,
       );
 
-      if (hitWall || hitSelf) {
+      if (result.outcome === "dead") {
         vibrate([35, 25, 55]);
         updateStatus("dead");
         return;
       }
 
-      snakeRef.current.unshift(next);
+      snakeRef.current = result.snake;
+      foodRef.current = result.food;
 
-      if (samePoint(next, foodRef.current)) {
+      if (result.ateFood) {
         playPickupSound();
         vibrate(18);
         const nextScore = scoreRef.current + 1;
@@ -248,12 +242,13 @@ export function useSnakeGame() {
           localStorage.setItem("znakeBest", String(nextScore));
           return nextScore;
         });
-        foodRef.current = randomFood(snakeRef.current);
-      } else {
-        snakeRef.current.pop();
       }
 
       draw();
+
+      if (result.outcome === "won") {
+        updateStatus("won");
+      }
     }, speed);
 
     return () => window.clearInterval(timer);

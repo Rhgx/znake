@@ -27,6 +27,7 @@ export function GameBoard({
     ready: { title: null, text: "Press start, swipe, or use an arrow key." },
     paused: { title: "Paused", text: "Press space or tap resume." },
     dead: { title: "Game over", text: `Score ${score}` },
+    won: { title: "You win", text: `Perfect score: ${score}` },
     running: null,
   }[status];
 
@@ -52,7 +53,7 @@ export function GameBoard({
             {overlayCopy.title && <h2>{overlayCopy.title}</h2>}
             <p>{overlayCopy.text}</p>
             <Button className="button button-primary" onClick={onStart}>
-              {status === "dead"
+              {status === "dead" || status === "won"
                 ? "Play again"
                 : status === "paused"
                   ? "Resume"

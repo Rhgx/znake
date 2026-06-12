@@ -7,6 +7,7 @@ import {
   type ImageName,
   type Point,
 } from "./constants";
+import { samePoint } from "./logic";
 
 const SEGMENT_IMAGES: Record<string, ImageName> = {
   "down,up": "zneck_straight_vertical_plain",
@@ -16,27 +17,6 @@ const SEGMENT_IMAGES: Record<string, ImageName> = {
   "down,left": "zneck_elbow_down_left_plain",
   "left,up": "zneck_elbow_left_up_plain",
 };
-
-export function samePoint(a: Point, b: Point) {
-  return a.x === b.x && a.y === b.y;
-}
-
-export function isOppositeDirection(a: Point, b: Point) {
-  return a.x === -b.x && a.y === -b.y;
-}
-
-export function randomFood(snake: Point[]): Point {
-  let food: Point;
-
-  do {
-    food = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
-    };
-  } while (snake.some((point) => samePoint(point, food)));
-
-  return food;
-}
 
 function directionFromTo(a: Point, b: Point): DirectionName | "" {
   if (b.x > a.x) return "right";
@@ -80,7 +60,7 @@ function pieceForSegment(
 export function drawGame(
   canvas: HTMLCanvasElement,
   snake: Point[],
-  food: Point,
+  food: Point | null,
   images: Partial<Record<ImageName, HTMLImageElement>>,
   direction: Point = DIRECTIONS.right,
 ) {
@@ -100,29 +80,31 @@ export function drawGame(
   }
   context.stroke();
 
-  const foodX = food.x * TILE_SIZE + TILE_SIZE / 2;
-  const foodY = food.y * TILE_SIZE + TILE_SIZE / 2;
-  const foodImage = images["zess-plush"];
-  const foodSize = TILE_SIZE * 0.86;
+  if (food) {
+    const foodX = food.x * TILE_SIZE + TILE_SIZE / 2;
+    const foodY = food.y * TILE_SIZE + TILE_SIZE / 2;
+    const foodImage = images["zess-plush"];
+    const foodSize = TILE_SIZE * 0.86;
 
-  if (foodImage?.complete && foodImage.naturalWidth > 0) {
-    context.save();
-    context.shadowColor = "rgba(0, 0, 0, 0.45)";
-    context.shadowBlur = 4;
-    context.shadowOffsetY = 1;
-    context.drawImage(
-      foodImage,
-      foodX - foodSize / 2,
-      foodY - foodSize / 2,
-      foodSize,
-      foodSize,
-    );
-    context.restore();
-  } else {
-    context.fillStyle = "#d85f2d";
-    context.beginPath();
-    context.arc(foodX, foodY, TILE_SIZE * 0.22, 0, Math.PI * 2);
-    context.fill();
+    if (foodImage?.complete && foodImage.naturalWidth > 0) {
+      context.save();
+      context.shadowColor = "rgba(0, 0, 0, 0.45)";
+      context.shadowBlur = 4;
+      context.shadowOffsetY = 1;
+      context.drawImage(
+        foodImage,
+        foodX - foodSize / 2,
+        foodY - foodSize / 2,
+        foodSize,
+        foodSize,
+      );
+      context.restore();
+    } else {
+      context.fillStyle = "#d85f2d";
+      context.beginPath();
+      context.arc(foodX, foodY, TILE_SIZE * 0.22, 0, Math.PI * 2);
+      context.fill();
+    }
   }
 
   for (let index = snake.length - 1; index >= 0; index -= 1) {
