@@ -12,7 +12,7 @@ const GRID_SIZE = 16;
 const CANVAS_SIZE = 768;
 const TILE_SIZE = CANVAS_SIZE / GRID_SIZE;
 const PUBLIC_PATH = import.meta.env.BASE_URL;
-const MIN_SWIPE_DISTANCE = 24;
+const MIN_SWIPE_DISTANCE = 16;
 const STARTING_SNAKE: Point[] = [
   { x: 7, y: 8 },
   { x: 6, y: 8 },
@@ -56,6 +56,14 @@ type ImageName = (typeof IMAGE_NAMES)[number];
 
 function samePoint(a: Point, b: Point) {
   return a.x === b.x && a.y === b.y;
+}
+
+function isOppositeDirection(a: Point, b: Point) {
+  return a.x === -b.x && a.y === -b.y;
+}
+
+function vibrate(pattern: number | number[]) {
+  if ("vibrate" in navigator) navigator.vibrate(pattern);
 }
 
 function randomFood(snake: Point[]): Point {
@@ -229,7 +237,7 @@ function App() {
     STARTING_SNAKE.map((point) => ({ ...point })),
   );
   const directionRef = useRef<Point>({ ...DIRECTIONS.right });
-  const nextDirectionRef = useRef<Point>({ ...DIRECTIONS.right });
+  const directionQueueRef = useRef<Point[]>([]);
   const foodRef = useRef<Point>(randomFood(STARTING_SNAKE));
   const imagesRef = useRef<Partial<Record<ImageName, HTMLImageElement>>>({});
   const pickupAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -274,7 +282,7 @@ function App() {
   const reset = useCallback(() => {
     snakeRef.current = STARTING_SNAKE.map((point) => ({ ...point }));
     directionRef.current = { ...DIRECTIONS.right };
-    nextDirectionRef.current = { ...DIRECTIONS.right };
+    directionQueueRef.current = [];
     foodRef.current = randomFood(snakeRef.current);
     scoreRef.current = 0;
     setScore(0);
@@ -286,7 +294,7 @@ function App() {
     if (statusRef.current === "dead") {
       snakeRef.current = STARTING_SNAKE.map((point) => ({ ...point }));
       directionRef.current = { ...DIRECTIONS.right };
-      nextDirectionRef.current = { ...DIRECTIONS.right };
+      directionQueueRef.current = [];
       foodRef.current = randomFood(snakeRef.current);
       scoreRef.current = 0;
       setScore(0);
@@ -313,10 +321,19 @@ function App() {
   const setDirection = useCallback(
     (directionName: DirectionName) => {
       const next = DIRECTIONS[directionName];
-      const current = directionRef.current;
+      const queue = directionQueueRef.current;
+      const current = queue.at(-1) ?? directionRef.current;
 
-      if (next.x === -current.x && next.y === -current.y) return;
-      nextDirectionRef.current = { ...next };
+      if (
+        queue.length >= 2 ||
+        samePoint(next, current) ||
+        isOppositeDirection(next, current)
+      ) {
+        return;
+      }
+
+      queue.push({ ...next });
+      vibrate(7);
 
       if (statusRef.current === "ready") start();
     },
@@ -337,11 +354,9 @@ function App() {
     [],
   );
 
-  const handlePointerUp = useCallback(
+  const handlePointerMove = useCallback(
     (event: React.PointerEvent<HTMLDivElement>) => {
       const startPoint = swipeStartRef.current;
-      swipeStartRef.current = null;
-
       if (!startPoint || startPoint.pointerId !== event.pointerId) return;
 
       const deltaX = event.clientX - startPoint.x;
@@ -351,6 +366,8 @@ function App() {
         return;
       }
 
+      swipeStartRef.current = null;
+
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         setDirection(deltaX > 0 ? "right" : "left");
       } else {
@@ -358,6 +375,14 @@ function App() {
       }
     },
     [setDirection],
+  );
+
+  const handlePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      handlePointerMove(event);
+      swipeStartRef.current = null;
+    },
+    [handlePointerMove],
   );
 
   const cancelSwipe = useCallback(() => {
@@ -399,7 +424,9 @@ function App() {
     if (status !== "running") return;
 
     const timer = window.setInterval(() => {
-      directionRef.current = { ...nextDirectionRef.current };
+      const queuedDirection = directionQueueRef.current.shift();
+      if (queuedDirection) directionRef.current = queuedDirection;
+
       const head = snakeRef.current[0];
       const next = {
         x: head.x + directionRef.current.x,
@@ -414,6 +441,7 @@ function App() {
       );
 
       if (hitWall || hitSelf) {
+        vibrate([35, 25, 55]);
         updateStatus("dead");
         return;
       }
@@ -422,6 +450,7 @@ function App() {
 
       if (samePoint(next, foodRef.current)) {
         playPickupSound();
+        vibrate(18);
         const nextScore = scoreRef.current + 1;
         scoreRef.current = nextScore;
         setScore(nextScore);
@@ -484,7 +513,9 @@ function App() {
         <div className="scoreboard" aria-label="Game score">
           <div>
             <span>Score</span>
-            <strong>{score}</strong>
+            <strong key={score} className={score > 0 ? "score-pop" : undefined}>
+              {score}
+            </strong>
           </div>
           <div>
             <span>Best</span>
@@ -495,8 +526,9 @@ function App() {
 
       <section className="game-card">
         <div
-          className="board"
+          className={`board${status === "dead" ? " board-dead" : ""}`}
           onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={cancelSwipe}
           onLostPointerCapture={cancelSwipe}
@@ -571,7 +603,10 @@ function App() {
           <Button
             className="pad-button"
             aria-label="Move up"
-            onClick={() => setDirection("up")}
+            onPointerDown={() => setDirection("up")}
+            onClick={(event) => {
+              if (event.detail === 0) setDirection("up");
+            }}
           >
             <ArrowUp aria-hidden="true" />
           </Button>
@@ -579,7 +614,10 @@ function App() {
           <Button
             className="pad-button"
             aria-label="Move left"
-            onClick={() => setDirection("left")}
+            onPointerDown={() => setDirection("left")}
+            onClick={(event) => {
+              if (event.detail === 0) setDirection("left");
+            }}
           >
             <ArrowLeft aria-hidden="true" />
           </Button>
@@ -587,7 +625,10 @@ function App() {
           <Button
             className="pad-button"
             aria-label="Move right"
-            onClick={() => setDirection("right")}
+            onPointerDown={() => setDirection("right")}
+            onClick={(event) => {
+              if (event.detail === 0) setDirection("right");
+            }}
           >
             <ArrowRight aria-hidden="true" />
           </Button>
@@ -595,7 +636,10 @@ function App() {
           <Button
             className="pad-button"
             aria-label="Move down"
-            onClick={() => setDirection("down")}
+            onPointerDown={() => setDirection("down")}
+            onClick={(event) => {
+              if (event.detail === 0) setDirection("down");
+            }}
           >
             <ArrowDown aria-hidden="true" />
           </Button>

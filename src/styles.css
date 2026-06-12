@@ -88,8 +88,13 @@ button {
 }
 
 .scoreboard strong {
+  display: inline-block;
   font-size: 1.5rem;
   font-weight: 500;
+}
+
+.score-pop {
+  animation: score-pop 180ms ease-out;
 }
 
 .game-card {
@@ -107,6 +112,10 @@ button {
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.board-dead {
+  animation: board-shake 180ms ease-out;
 }
 
 canvas {
@@ -516,5 +525,27 @@ kbd {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@keyframes score-pop {
+  50% {
+    color: #e9c2ad;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes board-shake {
+  25% {
+    transform: translateX(-2px);
+  }
+
+  50% {
+    transform: translateX(2px);
+  }
+
+  75% {
+    transform: translateX(-1px);
   }
 }
