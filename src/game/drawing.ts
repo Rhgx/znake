@@ -8,6 +8,15 @@ import {
   type Point,
 } from "./constants";
 
+const SEGMENT_IMAGES: Record<string, ImageName> = {
+  "down,up": "zneck_straight_vertical_plain",
+  "left,right": "zneck_straight_horizontal_plain",
+  "right,up": "zneck_elbow_up_right_plain",
+  "down,right": "zneck_elbow_right_down_plain",
+  "down,left": "zneck_elbow_down_left_plain",
+  "left,up": "zneck_elbow_left_up_plain",
+};
+
 export function samePoint(a: Point, b: Point) {
   return a.x === b.x && a.y === b.y;
 }
@@ -65,16 +74,7 @@ function pieceForSegment(
     .sort()
     .join(",");
 
-  const pieces: Record<string, ImageName> = {
-    "down,up": "zneck_straight_vertical_plain",
-    "left,right": "zneck_straight_horizontal_plain",
-    "right,up": "zneck_elbow_up_right_plain",
-    "down,right": "zneck_elbow_right_down_plain",
-    "down,left": "zneck_elbow_down_left_plain",
-    "left,up": "zneck_elbow_left_up_plain",
-  };
-
-  return pieces[directions] ?? "zneck_cross_plain";
+  return SEGMENT_IMAGES[directions] ?? "zneck_cross_plain";
 }
 
 export function drawGame(
@@ -90,18 +90,15 @@ export function drawGame(
   context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
   context.strokeStyle = "rgba(255, 255, 255, 0.055)";
   context.lineWidth = 1;
+  context.beginPath();
 
   for (let index = 0; index <= GRID_SIZE; index += 1) {
-    context.beginPath();
     context.moveTo(index * TILE_SIZE, 0);
     context.lineTo(index * TILE_SIZE, CANVAS_SIZE);
-    context.stroke();
-
-    context.beginPath();
     context.moveTo(0, index * TILE_SIZE);
     context.lineTo(CANVAS_SIZE, index * TILE_SIZE);
-    context.stroke();
   }
+  context.stroke();
 
   const foodX = food.x * TILE_SIZE + TILE_SIZE / 2;
   const foodY = food.y * TILE_SIZE + TILE_SIZE / 2;
@@ -109,20 +106,12 @@ export function drawGame(
   const foodSize = TILE_SIZE * 0.86;
 
   if (foodImage?.complete && foodImage.naturalWidth > 0) {
-    const sourceSize = foodImage.naturalWidth * 0.68;
-    const sourceX = (foodImage.naturalWidth - sourceSize) / 2;
-    const sourceY = foodImage.naturalHeight * 0.04;
-
     context.save();
     context.shadowColor = "rgba(0, 0, 0, 0.45)";
     context.shadowBlur = 4;
     context.shadowOffsetY = 1;
     context.drawImage(
       foodImage,
-      sourceX,
-      sourceY,
-      sourceSize,
-      sourceSize,
       foodX - foodSize / 2,
       foodY - foodSize / 2,
       foodSize,
